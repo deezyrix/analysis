@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Многофакторный анализ</title>
+<style>
+  table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+    padding: 5px;
+    text-align: center;
+  }
+  th {
+    background-color: #f2f2f2;
+  }
+  button {
+    margin-top: 10px;
+  }
+  #results {
+    margin-top: 20px;
+  }
+  input {
+    width: 50px;
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.4.4/math.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.4/jstat.min.js"></script>
+</head>
+<body>
+
+<h2>Данные для анализа</h2>
+<table id="data-table">
+  <tr>
+    <th>y</th>
+    <th>x1</th>
+    <th>x2</th>
+    <th>x3</th>
+  </tr>
+  <!-- Данные будут добавлены здесь -->
+</table>
+
+<button onclick="performAnalysis()">Вычислить</button>
+
+<div id="results"></div>
+
+<script>
+// Предоставленные данные
+const data = [
+  [5, 2, 7, 3],
+  [6, 3, 7, 2],
+  [9, 6, 8, 5],
+  [5, 1, 4, 6],
+  [7, 5, 1, 9],
+  [6, 4, 4, 3],
+  [8, 5, 6, 4],
+  [9, 6, 5, 7],
+  [8, 6, 3, 7],
+  [5, 3, 4, 3],
+  [4, 2, 1, 3]
+];
+
+  // Функция для добавления данных в таблицу
+  function addDataToTable() {
+    const table = document.getElementById('data-table');
+    data.forEach(row => {
+      const tr = document.createElement('tr');
+      row.forEach(value => {
+        const td = document.createElement('td');
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.value = value;
+        td.appendChild(input);
+        tr.appendChild(td);
+      });
+      table.appendChild(tr);
+    });
+  }
+
+// Функция для выполнения многофакторного анализа
+function performAnalysis() {
+  // Получаем данные из таблицы
+  const rows = [...document.getElementById('data-table').rows].slice(1);
+  const data = rows.map(row => [...row.cells].map(cell => parseFloat(cell.children[0].value)));
+
+  // Вычисляем среднее значение y
+  const y_mean = data.reduce((sum, row) => sum + row[0], 0) / data.length;
+
+  // Вычисляем SST
+  const SST = data.reduce((sum, row) => sum + Math.pow(row[0] - y_mean, 2), 0);
+
+  // Подготавливаем данные для регрессионного анализа
+  const X = data.map(row => [1, ...row.slice(1)]);
+  const Y = data.map(row => row[0]);
+
+  // Вычисляем коэффициенты регрессии
+  const XtX = math.multiply(math.transpose(X), X);
+  const XtX_inv = math.inv(XtX);
+  const XtY = math.multiply(math.transpose(X), Y);
+  const B = math.multiply(XtX_inv, XtY);
+
+  // Вычисляем SSE и SSR
+  const Y_pred = math.multiply(X, B);
+  const residuals = math.subtract(Y, Y_pred);
+  const SSE = math.sum(math.square(residuals));
+  const SSR = SST - SSE;
+
+  // Вычисляем R^2 и F
+  const R_squared = 1 - SSE / SST;
+  const F = (SSR / (B.length - 1)) / (SSE / (data.length - B.length));
+
+  // Вычисляем Fкр
+  const F_critical = jStat.centralF.inv(0.95, B.length - 1, data.length - B.length);
+
+  // Выводим результаты
+  const results = document.getElementById('results');
+  results.innerHTML = `
+    <p>B0 = ${B[0].toFixed(3)}</p>
+    <p>B1 = ${B[1].toFixed(3)}</p>
+    <p>B2 = ${B[2].toFixed(3)}</p>
+    <p>B3 = ${B[3].toFixed(3)}</p>
+    <p>y сред = ${y_mean.toFixed(3)}</p>
+    <p>SST = ${SST.toFixed(3)}</p>
+    <p>SSE = ${SSE.toFixed(3)}</p>
+    <p>SSR = ${SSR.toFixed(3)}</p>
+    <p>R^2 = ${R_squared.toFixed(3)}</p>
+    <p>F = ${F.toFixed(3)}</p>
+    <p>Fкр = ${F_critical.toFixed(3)}</p>
+  `;
+}
+
+// Добавляем данные в таблицу при загрузке страницы
+window.onload = addDataToTable;
+</script>
+
+</body>
+</html>
